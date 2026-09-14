@@ -1,11 +1,10 @@
 # Meridian
 
-An AI research analyst that profiles PE and VC fund managers across India and Southeast Asia, structures the findings into a queryable database, and tracks the private-markets landscape as it changes.
+An AI analyst for India + Southeast Asia private markets. Type a fund manager's name; a 3-agent pipeline researches them, structures the findings into a strict Postgres schema with per-field confidence, produces an analyst-grade takeaway, and files it in a shared tracker you can query with natural language.
 
 Built explicitly to solve a problem Lanmea Capital has publicly said it needs solved.
 
-**Live demo:** https://YOUR-CLOUDFLARE-URL.pages.dev
-**Sample profile:** https://YOUR-CLOUDFLARE-URL.pages.dev/#/firms/peak-xv-partners
+**Live demo:** https://meridian-fund-manager.pages.dev
 **Repo:** the one you're looking at
 
 ---
@@ -22,20 +21,24 @@ Two direct quotes from Lanmea:
 > "A more independent and timely view of markets, fund managers, companies, deals and risks."
 > ...Lanmea Capital, About page
 
-Meridian is that view. You give it a fund manager's name; three cooperating agents read the open web about the firm, structure what they find into a strict schema with per-field confidence flags, and file the result in a shared tracker. Every claim is sourced. Every field carries confidence. Every profile stays current the next time you re-run it.
-
-The seed dataset is India + Southeast Asia focused (Peak XV, Blume, Kedaara, East Ventures, Openspace, Elevation, Accel India, 3one4, Jungle, Vertex SEA, Chiratae, Multiples, and more) so the tracker looks like a real intelligence base on first open, not an empty form.
+Meridian is that view. Every fact is source-linked. Every field carries confidence. Every profile stays current on re-run. And you can *ask* the tracker questions in plain English.
 
 ---
 
-## What it does
+## What it actually does
 
-1. **Research a firm.** Type "Blume Ventures" and hit go. A 3-agent LangGraph pipeline generates targeted web queries, executes real searches through Tavily, extracts sourced facts, structures them into a strict schema with confidence flags, and writes a one-page analyst-ready profile. Every step streams live to the browser over Server-Sent Events.
-2. **Save profiles into a tracker.** Every profile is upserted to Postgres, keyed on firm name. Re-running a firm refreshes the record in place with a new `last_updated` timestamp.
-3. **Cross-firm analysis.** A live deals-and-activity feed rolls up every firm's recent activity into one reverse-chronological view. Portfolio-overlap detection surfaces companies backed by two or more tracked firms. Side-by-side comparison lets you pick 2 to 4 firms and see their fact sheets in parallel columns.
-4. **Ask questions.** Every saved profile has a chat box that answers questions about that firm using only its sourced findings as context. No hallucinations from the general web; only what the pipeline actually cited.
-5. **Export.** Any profile can be downloaded as CSV, Markdown, or PDF (browser print, styled as a proper one-pager with source URLs footnoted).
-6. **Refresh on a schedule.** A GitHub Action can hit the `/api/refresh` endpoint weekly to re-profile everything older than 7 days, so the tracker stays current without anyone touching it.
+1. **Ask Meridian anything** (top-nav search bar, ⌘K to open). Global RAG over every firm's sourced findings. "Which India VCs invest in fintech?" "Compare Peak XV and Blume." "Who backs Indonesian consumer startups?" Answers are grounded in the tracker's own database, cited [n], firm names clickable.
+2. **Profile a firm.** The 3-agent LangGraph pipeline generates targeted web queries, executes them through Tavily, extracts sourced facts, structures them with confidence flags, and writes a one-page analyst-ready profile. Streams live over SSE.
+3. **Read the analyst takeaway.** Every profile leads with a 3-bullet inference block ("Growth-tilt confirmed: Fund IX is 47% larger…") and a 2-sentence investment thesis pullquote. The difference between a database and an analyst.
+4. **See who's most similar.** Every profile shows the 3 most comparable firms in the tracker, scored by sector / stage / geography overlap, one-line differentiator each.
+5. **Compare firms side-by-side + LLM diff.** Pick 2–4 firms from the tracker → parallel columns of their fact sheets, plus an auto-generated "what actually distinguishes these" analysis at the top.
+6. **Track deals and activity.** Every notable investment, fund close, exit, and leadership move is a first-class row in Postgres. Filter by firm, kind, company or year. Cross-firm portfolio overlaps auto-detected. Deal-frequency sparkline on every tracker row.
+7. **Live signal card.** "3 fund closes in the last 90 days" + list of most-recently-updated firms right on the Overview page.
+8. **Analyst notes per firm.** Textarea, auto-saved to the backend on debounce.
+9. **Watchlist.** Star firms locally; persisted per browser.
+10. **Chat with one firm's findings** (RAG scoped to that firm). Every answer cites the specific findings used.
+11. **Export.** Any profile → CSV, Markdown, or print-styled PDF.
+12. **Weekly automation.** A GitHub Action hits `/api/refresh` every Monday to re-profile firms older than 7 days.
 
 ---
 
@@ -43,37 +46,73 @@ The seed dataset is India + Southeast Asia focused (Peak XV, Blume, Kedaara, Eas
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│  Vite + React frontend (Cloudflare Pages)                            │
-│    Overview page, Tracker, Activity feed, Overlaps, Deals,           │
-│    Profile generator, Compare view, Saved profile + Ask chat.        │
-│    Consumes SSE stream from /api/profile with a plain fetch reader.  │
+│  Vite + React SPA (Cloudflare Pages)                                 │
+│    Overview (Hero + Pipeline + Signal + Tracker + Trust)             │
+│    Tracker · Deals · Activity · Overlaps                             │
+│    Profile generator · Saved profile · Compare · AskChat · Notes     │
+│    Global Ask Meridian bar in top nav (⌘K)                           │
 └──────────────────────┬───────────────────────────────────────────────┘
-                       │  HTTPS + X-API-Key (optional shared secret)
+                       │  HTTPS + X-API-Key
 ┌──────────────────────▼───────────────────────────────────────────────┐
-│  FastAPI backend (Railway, Docker)                                   │
-│    /api/profile     3-agent LangGraph pipeline, SSE                  │
-│    /api/managers    tracker CRUD (list, get, upsert-on-refresh)      │
-│    /api/compare     parallel profiles for side-by-side               │
-│    /api/overlaps    portfolio cross-reference                        │
-│    /api/activity    cross-firm reverse-chron feed                    │
-│    /api/deals       first-class deals table, filterable              │
-│    /api/managers/{id}/ask   RAG chat over that firm's findings       │
+│  FastAPI backend (Railway, Docker, non-root user, --proxy-headers)   │
+│    /api/profile           3-agent LangGraph pipeline, SSE            │
+│    /api/managers[/{id}]   tracker CRUD, upsert by firm_name          │
+│    /api/managers/{id}/note   PUT persistent analyst notes            │
+│    /api/managers/{id}/ask    RAG scoped to that firm                 │
+│    /api/ask-global        RAG across ALL firms                       │
+│    /api/comparables/{id}  3 most similar firms                       │
+│    /api/compare-diff      LLM-generated diff over 2-4 firms          │
+│    /api/compare           parallel profiles for side-by-side         │
+│    /api/signals           tracker-wide activity signal (last N days) │
+│    /api/firms/{id}/timeline  deals-per-year for sparklines           │
+│    /api/deals             first-class deals table, filterable        │
+│    /api/overlaps          portfolio cross-reference                  │
+│    /api/activity          cross-firm activity feed                   │
+│    /api/refresh           re-profile stale rows (cron target)        │
 │    /api/managers/{id}/export.{csv,md}                                │
-│    /api/refresh     re-profile stale rows (called by cron)           │
 │                                                                      │
 │  Middleware: CORS, security headers, per-IP rate limiting (slowapi), │
 │  optional shared-secret gate on POST /api/profile.                   │
+│  Logging: stdlib structured. Tavily retry: 3× exponential backoff.   │
 └──────────────────────┬───────────────────────────────────────────────┘
                        │
         ┌──────────────┼──────────────┬───────────────┐
         ▼              ▼              ▼               ▼
    PostgreSQL      OpenAI          Tavily         GitHub Action
    fund_managers   (structured     (web search)   weekly cron
-   deals           JSON output)                   hits /api/refresh
-   findings
+   deals           JSON output +                  hits /api/refresh
+   findings        analyst
+   people          takeaway)
 ```
 
-Full explanation of the design choices is in [ARCHITECTURE.md](./ARCHITECTURE.md), including every build-vs-buy call I made and why.
+Full design defence in [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+---
+
+## The pipeline, in more detail
+
+Three cooperating agents, deterministic order, LangGraph state machine.
+
+**1. Research agent** generates 5–7 targeted queries per firm (fund history, AUM, portfolio, leadership, sector thesis, recent activity), fires each through Tavily with 3× exponential-backoff retry, and asks the LLM to extract atomic facts, each with the source URL it came from.
+Output: 8–20 sourced findings.
+
+**2. Structuring agent** converts findings to a strict JSON profile:
+```json
+{
+  "aum": { "value": "$2.85B", "confidence": "verified", "source": "..." },
+  "sectors": { "value": ["fintech", "SaaS"], "confidence": "inferred", "source": "..." },
+  ...
+  "investment_thesis": "Peak XV writes $10-50M growth-stage checks with strong AI conviction; 15-20 investments per year, prefers founder-led follow-ons.",
+  "notable_portfolio": [...],
+  "leadership": [...],
+  "recent_activity": [...]
+}
+```
+Then a second small LLM call produces the 3-bullet analyst takeaway — sharp inferences, not fact restates. Numbers in the takeaway must appear in the profile.
+
+**3. Writer agent** streams a one-page Markdown profile with the takeaway at the top, thesis as a pullquote, fact sheet, portfolio, leadership, activity, and "what to watch."
+
+Every stage streams progress + output over SSE to the browser: `phase`, `queries`, `findings`, `profile`, `report_chunk`, `report_done`, `saved`.
 
 ---
 
@@ -82,151 +121,188 @@ Full explanation of the design choices is in [ARCHITECTURE.md](./ARCHITECTURE.md
 ```
 Lanmea/
   backend/
-    Dockerfile              # Railway-ready
+    Dockerfile              # Railway-ready, non-root user
     railway.json            # deploy config
-    requirements.txt
+    requirements.txt        # includes psycopg2-binary, slowapi, pytest
     seed_managers.py        # 20 real India / SEA firms
     tests/                  # pytest smoke tests
     app/
       main.py               # FastAPI assembly + middleware
       config.py             # env loading
-      database.py           # SQLAlchemy models: FundManager, Deal, Person
+      database.py           # SQLAlchemy: FundManager, Deal, Person, Finding
       llm.py                # OpenAI / Anthropic client wrapper
-      search.py             # Tavily wrapper with retry
+      search.py             # Tavily wrapper with retry + backoff
       logging_setup.py      # structured logs
-      security.py           # rate limiter, headers, API-key gate
+      security.py           # rate limiter, security headers, API-key gate
       pipeline/
-        research.py         # agent 1: targeted queries + sourced facts
-        structuring.py      # agent 2: JSON schema + confidence flags
+        research.py         # agent 1: queries + sourced facts
+        structuring.py      # agent 2: JSON schema + confidence + takeaway
         writer.py           # agent 3: one-page Markdown profile
         graph.py            # LangGraph wiring
       routes/
-        evaluate.py         # POST /api/profile (SSE), /api/managers
+        evaluate.py         # POST /api/profile (SSE), /api/managers, /api/notes
         analytics.py        # /api/compare, /overlaps, /activity, exports
-        deals.py            # /api/deals (first-class deals table)
-        ask.py              # /api/managers/{id}/ask (RAG chat)
+        deals.py            # /api/deals (first-class table)
+        ask.py              # /api/managers/{id}/ask + /api/ask-global (RAG)
+        insights.py         # /api/comparables, /compare-diff, /signals, /timeline
         automation.py       # /api/refresh (cron target)
   frontend/
-    Dockerfile              # optional, if you don't use Pages
     package.json
     src/
-      App.jsx               # thin router
-      styles.css            # design system, print stylesheet
-      components/           # BrandMark, Hero, WorldMap, PipelineStatus...
-      pages/                # OverviewPage, TrackerPage, DealsPage, etc.
-      hooks/useEvaluationStream.js
+      App.jsx               # thin router + top nav with AskBar
+      styles.css            # design system (light theme, print stylesheet)
+      config.js             # API base URL + optional key
+      api.js                # fetch helpers for every backend route
+      components/
+        AskBar.jsx          # ⌘K global RAG modal
+        Hero.jsx            # full-bleed WebGL hero + India/SEA map
+        WorldMap.jsx        # region-cropped Asia + SEA coverage map
+        SignalCard.jsx      # tracker-wide "what's moving"
+        TrackerTable.jsx    # with sparklines + watch stars
+        DealsSparkline.jsx
+        WatchStar.jsx
+        StatStrip.jsx
+        TakeawayCard.jsx    # thesis pullquote + 3-bullet analyst take
+        Comparables.jsx     # 3 most similar firms per profile
+        CompareView.jsx     # side-by-side table
+        CompareDiff.jsx     # LLM diff over 2-4 firms
+        ProfileHero.jsx     # equity-research-style profile header
+        ProfileView.jsx     # composes all profile sections
+        AskChat.jsx         # scoped RAG chat per firm
+        NotePanel.jsx       # analyst notes, auto-saved
+        ExportBar.jsx       # CSV / Markdown / print
+        PipelineStatus.jsx  # live pipeline card with progress bar + timer
+        ...
+      pages/                # one file per top-level view
+        OverviewPage.jsx
+        TrackerPage.jsx
+        DealsPage.jsx
+        ActivityPage.jsx
+        OverlapsPage.jsx
+        NewProfilePage.jsx
+        SavedProfilePage.jsx
+        ComparePage.jsx
+      data/
+        seedFirms.js        # 20 real firms shipped as fallback fixtures
   .github/workflows/
-    refresh.yml             # weekly cron that hits /api/refresh
-  ARCHITECTURE.md           # build-vs-buy decisions
-  README.md                 # this file
+    refresh.yml             # weekly cron
+  ARCHITECTURE.md
+  README.md
 ```
 
 ---
 
 ## Getting it running locally
 
-You need Python 3.11+, Node 18+, an OpenAI key, and a Tavily key.
+Python 3.11+, Node 18+, OpenAI + Tavily keys.
 
 **Backend:**
-
 ```bash
 cd backend
 python -m venv .venv
-.venv\Scripts\activate                # PowerShell / cmd
+.venv\Scripts\activate                # Windows
 # source .venv/bin/activate           # macOS / Linux
 pip install -r requirements.txt
-copy .env.example .env                # then edit .env with your keys
+copy .env.example .env                # then fill in your keys
 uvicorn app.main:app --reload --port 8000
 ```
 
-**Seed the tracker** (in a second terminal, same venv):
-
+**Seed the tracker** (second terminal, same venv):
 ```bash
 python seed_managers.py
 ```
-
-This runs the full pipeline against 20 real India + SEA firms. Takes about 15 minutes. Idempotent, so you can re-run it any time to refresh.
+Runs the pipeline against 20 real India + SEA firms. ~15 minutes. Idempotent.
 
 **Frontend:**
-
 ```bash
 cd frontend
 npm install
-copy .env.example .env                # points at http://localhost:8000
+copy .env.example .env
 npm run dev
+# open http://localhost:5173
 ```
-
-Open http://localhost:5173.
 
 ---
 
 ## Deploying it live
 
-I deployed the demo to Railway (backend, via Docker) and Cloudflare Pages (frontend, static). Roughly 10 minutes end to end. Full walkthrough is in [ARCHITECTURE.md](./ARCHITECTURE.md#deployment), but the short version:
+Backend to Railway (Docker + Postgres plugin), frontend to Cloudflare Pages (Vite build). Full walkthrough in [ARCHITECTURE.md § Deployment](./ARCHITECTURE.md#deployment).
 
-**Backend on Railway:**
-1. Add the repo, point at `Lanmea/backend` as the service root.
-2. Railway sees `railway.json`, uses `Dockerfile`.
-3. Add a Postgres plugin. Railway wires `DATABASE_URL` for you.
-4. Set env vars: `LLM_PROVIDER`, `OPENAI_API_KEY`, `TAVILY_API_KEY`, `ALLOWED_ORIGINS` (your Pages URL), `API_KEY` (any random string).
-5. Deploy. Healthcheck lives at `/health`.
-6. Run the seed once: `railway run python seed_managers.py`.
+Short version:
+1. **Railway** → deploy from GitHub, Root Directory `backend`, Dockerfile Path `Dockerfile`.
+2. Add Postgres plugin, reference its `DATABASE_URL` on the backend service.
+3. Backend env: `LLM_PROVIDER=openai`, `OPENAI_API_KEY`, `TAVILY_API_KEY`, `ALLOWED_ORIGINS=<your-pages-url>`, `API_KEY=<random>`.
+4. Once green, seed once from local against the public Postgres URL:
+   ```powershell
+   $env:DATABASE_URL="postgresql://...public URL from Railway..."
+   $env:OPENAI_API_KEY="..."; $env:TAVILY_API_KEY="..."
+   python seed_managers.py
+   ```
+5. **Cloudflare Pages** → framework preset Vite, build `npm run build`, output `dist`.
+6. Env: `VITE_API_BASE_URL=https://<your-railway-url>`, `VITE_API_KEY=<same as backend>`.
 
-**Frontend on Cloudflare Pages:**
-1. Framework preset: Vite. Build command: `npm run build`. Output: `dist`.
-2. Env vars: `VITE_API_BASE_URL` (your Railway URL), `VITE_API_KEY` (same string as backend `API_KEY`).
-3. Deploy.
+The frontend ships 20 real firms as fallback fixtures so the tracker is populated the instant the page loads, even before seeding runs.
 
 ---
 
-## Build-vs-buy calls I made
+## What sets this apart
 
-Full detail in [ARCHITECTURE.md](./ARCHITECTURE.md). Summary:
+Most "AI profiler" side projects stop at generating a summary. Meridian goes past that:
 
-| Decision | I picked | Because |
-|---|---|---|
-| Agent orchestration | LangGraph | Explicit state graph, easier to reason about than LangChain runnables for a fixed 3-node pipeline |
-| Web search | Tavily | Purpose-built for LLM retrieval, one API call returns clean snippets, cheaper than Serper for this volume |
-| LLM provider | OpenAI (Anthropic as fallback) | Cheap, fast, `gpt-4o-mini` was sufficient for both structuring and writing |
-| Vector DB / RAG | None for the pipeline, in-memory keyword filter for the chat | Findings per firm are small enough (10 to 20 rows) that a vector index is overkill and adds infra cost |
-| Streaming | Server-Sent Events | Simpler than WebSockets for one-way progress; no message-framing worries |
-| Database | Postgres in prod, SQLite locally | Same SQLAlchemy models both ways, no ceremony in dev |
-| Backend | FastAPI | Native async, first-class Pydantic validation, small footprint in Docker |
-| Frontend | Vite + React (plain, no Next.js) | No SSR needed, static build fits Cloudflare Pages, faster local dev |
-| Deploy backend | Railway + Docker | One config file, Postgres one click away, matches the deploy pattern I already knew |
-| Deploy frontend | Cloudflare Pages | Free tier, global CDN, no cold starts |
-| Auth | Optional shared-secret X-API-Key | Full JWT is overkill for a demo, but I still need to stop random scripts from burning my OpenAI credits |
-
-Every one of those calls has a "when I'd change my mind" note in [ARCHITECTURE.md](./ARCHITECTURE.md).
+* **Analyst view, not data dump.** Every profile leads with a 3-bullet inference and a thesis pullquote generated after structuring, so the reader gets analysis before facts.
+* **RAG as the front door, not a hidden feature.** The Ask Meridian bar is in the top nav, ⌘K opens it from anywhere. Runs retrieval across every firm's findings and grounds every answer with citations.
+* **Cross-firm comparability.** Comparables panel on every profile. LLM-generated diff on the compare page. Portfolio-overlap detection across all firms. These are the queries analysts actually need.
+* **First-class entities, not JSON blobs.** Deals, people, findings each get their own Postgres table with FKs, so cross-firm queries are cheap SQL, not application-layer JSON scans.
+* **Live signal card + sparklines** turn the tracker from a directory into something that reads as *alive*.
+* **Analyst notes** are persisted per firm so the tool remembers what you thought last time.
 
 ---
 
 ## Design principles I stuck to
 
-1. **Sourced or silent.** Every non-empty field on a profile cites a specific URL from the research pass. If nothing in the findings supports a claim, the field renders as a dash, never as an unattributed guess.
-2. **Confidence, not vibes.** Fields are tagged `verified` (two or more independent findings agreed), `inferred` (a single supporting source), or `unknown`. An analyst can see at a glance which numbers to trust.
-3. **A tracker, not a lookup.** Every profile is upserted to a real relational store. Re-run the same firm a month later and the record is refreshed in place, the way a live intelligence base actually works.
+1. **Sourced or silent.** Every non-empty field cites a specific URL from the research pass. Nothing rendered as verified without an attributed source.
+2. **Confidence, not vibes.** Fields are tagged verified / inferred / unknown so an analyst sees at a glance which numbers to trust.
+3. **A tracker, not a lookup.** Every profile is upserted, refreshable in place. The database is the product.
+4. **No fabrication in the UI even at empty state.** Seed rows are marked as `seed` badges, not passed off as generated profiles. AUM is only shown for firms where the number is publicly reported.
 
 ---
 
-## What's next (v0.4 backlog)
+## Build-vs-buy summary
 
-Things I know are missing and would build next:
+Full detail in [ARCHITECTURE.md](./ARCHITECTURE.md).
 
-* True cross-source confidence: today the "verified" flag is assigned by the LLM based on how many findings mention a fact. A more honest v2 would compute it from the raw findings deterministically.
-* `people` and `funds` as first-class tables joined to `fund_managers` (right now `people` are still per-firm rows in the leadership blob).
-* An "alerts" feed: when a refresh detects a delta (new fund close, new leadership, big new portfolio bet), surface it as a change event on the tracker.
-* Firm URL slugs so profiles are shareable as `/firms/peak-xv-partners`.
-* Read-only cache layer for search results so re-runs cost less on repeat queries.
+| Decision | I picked | Because |
+|---|---|---|
+| Agent orchestration | LangGraph | Explicit state graph, right shape for a fixed 3-node pipeline |
+| Web search | Tavily | Purpose-built for LLM retrieval, clean snippets, right price for this volume |
+| LLM provider | OpenAI (Anthropic as fallback) | `gpt-4o-mini` sufficient for structuring + writing, cheap and fast |
+| Vector DB / RAG | None. Keyword-overlap ranking over `findings` table | Per-firm findings are small enough that a vector index adds infra without accuracy gain. pgvector on the same Postgres is the natural next step if search across all firms grows |
+| Streaming | Server-Sent Events | Simpler than WebSockets for one-way progress |
+| Database | Postgres in prod, SQLite locally | Same SQLAlchemy models both ways |
+| Backend | FastAPI | Native async, first-class Pydantic, small Docker footprint |
+| Frontend | Vite + React (plain, no Next.js) | No SSR needed, static build fits Cloudflare Pages |
+| Container | Hand-rolled Dockerfile, not Nixpacks | Control over Python version, non-root user, CMD |
+| Auth | Optional shared-secret X-API-Key | Full JWT is overkill for a demo; enough to protect LLM budget |
+| Rate limiting | slowapi in-process | No Redis needed for single-replica |
 
 ---
 
-## Credits and honest caveats
+## What's next (v0.4)
 
-* Fact quality is bounded by whatever Tavily surfaces. Small or opaque firms come back thin.
-* AUM figures pulled from press coverage tend to lag actual size by a fund cycle. Treat everything with the `inferred` chip skeptically.
-* The `recent_activity` field is whatever the LLM decided was newsworthy from the sources it saw. This is why the `deals` table exists as a separate first-class store; it's easier to reason about deals as rows than as prose bullets.
-* This is a portfolio project built for one specific job application. It is not production-graded software.
+* True cross-source confidence — compute deterministically from findings rather than let the LLM self-report.
+* pgvector on the `findings` table for semantic search across all firms (natural upgrade path from the current keyword-overlap retrieval).
+* `people` promoted to first-class rows with cross-firm join (co-investor networks).
+* Public per-firm URL slugs so profiles are shareable as `/firms/peak-xv-partners`.
+* Alerts feed when a refresh detects a delta (new fund close, big new bet) worth surfacing.
+
+---
+
+## Honest caveats
+
+* Fact quality is bounded by Tavily. Small or opaque firms come back thin.
+* AUM figures pulled from press coverage tend to lag actual size by a fund cycle. Trust the confidence chip.
+* The `verified` confidence label is LLM-assigned based on how many findings agree — an honest v2 would count them deterministically.
+* This is a portfolio project built for one specific job application. Not production-grade software.
 
 ---
 

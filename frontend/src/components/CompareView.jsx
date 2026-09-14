@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { compareManagers } from "../api";
+import CompareDiff from "./CompareDiff.jsx";
 
 function ConfChip({ conf }) {
   const c = (conf || "unknown").toLowerCase();
@@ -51,6 +52,7 @@ export default function CompareView({ ids, onBack }) {
       </div>
 
       {err && <div className="err">Error: {err}</div>}
+      {!loading && firms.length >= 2 && <CompareDiff ids={ids} />}
       {loading ? (
         <div className="card center hint">Loading comparison…</div>
       ) : (

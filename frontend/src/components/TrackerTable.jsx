@@ -2,6 +2,11 @@ import React, { useEffect, useState } from "react";
 import { listManagers } from "../api";
 import { mergeWithSeed, SEED_FIRMS } from "../data/seedFirms.js";
 import StatStrip from "./StatStrip.jsx";
+import DealsSparkline from "./DealsSparkline.jsx";
+import WatchStar from "./WatchStar.jsx";
+import MomentumArrow from "./MomentumArrow.jsx";
+import { momentumFromTimeline } from "../lib/momentum.js";
+import { seedById } from "../data/seedFirms.js";
 
 const SORT_OPTIONS = [
   { key: "updated_at", label: "Last updated" },
@@ -90,13 +95,9 @@ export default function TrackerTable({ refreshKey, onSelect, onNew, onRowsChange
   const canCompare = selected.size >= 2 && selected.size <= 4;
 
   const clickRow = (r) => {
-    if (typeof r.id === "string" && r.id.startsWith("seed-")) {
-      // Send the user to the profile generator prefilled with this firm's name
-      onNew?.({ firm_name: r.firm_name, geography: r.geography_focus,
-                sector_focus: r.sectors, stage_focus: r.stages });
-    } else {
-      onSelect(r.id);
-    }
+    // Both seed rows and real rows open the profile page.
+    // SavedProfilePage handles both via seed lookup or API fetch.
+    onSelect(r.id);
   };
 
   return (
@@ -160,11 +161,13 @@ export default function TrackerTable({ refreshKey, onSelect, onNew, onRowsChange
               <thead>
                 <tr>
                   <th style={{ width: 34 }}></th>
+                  <th style={{ width: 28 }}></th>
                   <th onClick={() => toggleSort("firm_name")}>Firm{arrow("firm_name")}</th>
                   <th onClick={() => toggleSort("geography")}>Geography{arrow("geography")}</th>
                   <th>HQ</th>
                   <th onClick={() => toggleSort("aum")}>AUM{arrow("aum")}</th>
                   <th>Sectors</th>
+                  <th>Deals</th>
                   <th onClick={() => toggleSort("updated_at")}>Updated{arrow("updated_at")}</th>
                 </tr>
               </thead>
@@ -178,6 +181,9 @@ export default function TrackerTable({ refreshKey, onSelect, onNew, onRowsChange
                         <input type="checkbox" checked={selected.has(r.id)}
                                onChange={() => {}} onClick={(e) => e.stopPropagation()} />
                       )}
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <WatchStar firmKey={r.firm_name_key || r.firm_name?.toLowerCase()} />
                     </td>
                     <td onClick={() => clickRow(r)}>
                       <div className="firm-name">{r.firm_name}</div>
@@ -194,6 +200,14 @@ export default function TrackerTable({ refreshKey, onSelect, onNew, onRowsChange
                             <span className="chip chip-sector" key={i} style={{ marginRight: 4 }}>{s.trim()}</span>
                           ))
                         : "-"}
+                    </td>
+                    <td onClick={() => clickRow(r)}>
+                      <DealsSparkline firmId={r.id} />
+                      {(() => {
+                        const s = typeof r.id === "string" && r.id.startsWith("seed-") ? seedById(r.id) : null;
+                        const mom = s?.momentum || (s?.timeline && momentumFromTimeline(s.timeline)) || "steady";
+                        return <MomentumArrow momentum={mom} />;
+                      })()}
                     </td>
                     <td onClick={() => clickRow(r)} className="hint">
                       {r.updated_at ? fmtDate(r.updated_at) : <span className="badge">seed</span>}

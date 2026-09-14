@@ -71,6 +71,8 @@ def _upsert_profile(final_state: dict) -> int:
             findings_json=json.dumps(final_state.get("findings", []), default=str),
             profile_md=final_state.get("profile_md", "") or "",
             summary=(final_state.get("summary") or "")[:1024],
+            investment_thesis=str(profile.get("investment_thesis") or "")[:2000],
+            takeaway=str(profile.get("_takeaway") or "")[:2000],
         )
         if row:
             for k, v in payload.items(): setattr(row, k, v)
@@ -246,6 +248,24 @@ def get_manager(mid: int, request: Request, db: Session = Depends(get_db)):
         "profile": json.loads(r.profile_json or "{}"),
         "findings": json.loads(r.findings_json or "[]"),
         "profile_md": r.profile_md or "",
+        "investment_thesis": r.investment_thesis or "",
+        "takeaway": r.takeaway or "",
+        "analyst_notes": r.analyst_notes or "",
         "updated_at": r.updated_at.isoformat() if r.updated_at else "",
         "created_at": r.created_at.isoformat() if r.created_at else "",
     }
+
+
+class NoteRequest(BaseModel):
+    note: str = Field(default="", max_length=8000)
+
+
+@router.put("/api/managers/{mid}/note")
+@limiter.limit("30/minute")
+def save_note(mid: int, request: Request, body: NoteRequest, db: Session = Depends(get_db)):
+    r = db.query(FundManagerProfile).filter(FundManagerProfile.id == mid).first()
+    if not r: raise HTTPException(status_code=404, detail="Not found")
+    r.analyst_notes = body.note[:8000]
+    r.updated_at = datetime.utcnow()
+    db.commit()
+    return {"ok": True, "chars": len(r.analyst_notes)}

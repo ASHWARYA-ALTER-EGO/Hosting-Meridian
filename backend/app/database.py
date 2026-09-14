@@ -27,6 +27,10 @@ class FundManagerProfile(Base):
     findings_json = Column(Text, default="[]")
     profile_md = Column(Text, default="")
     summary = Column(String(1024), default="")
+    # NEW analyst-value fields
+    investment_thesis = Column(Text, default="")     # 2-sentence "how they invest"
+    takeaway = Column(Text, default="")              # analyst-style pull observations (3 bullets)
+    analyst_notes = Column(Text, default="")         # user-editable notes persisted per firm
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -36,23 +40,20 @@ class FundManagerProfile(Base):
 
 
 class Deal(Base):
-    """First-class deal / activity record. Persisted from the structuring
-    node's `notable_portfolio` and `recent_activity` outputs."""
     __tablename__ = "deals"
     id = Column(Integer, primary_key=True)
     firm_id = Column(Integer, ForeignKey("fund_managers.id"), index=True, nullable=False)
     company_name = Column(String(255), default="")
-    company_name_key = Column(String(255), index=True, default="")   # normalised for overlap detection
-    kind = Column(String(32), default="investment")                  # investment | fund_close | exit | leadership | other
+    company_name_key = Column(String(255), index=True, default="")
+    kind = Column(String(32), default="investment")
     note = Column(Text, default="")
-    date_str = Column(String(32), default="")                        # "2024", "2024-06", "2024-06-12", "Jun 2024"
+    date_str = Column(String(32), default="")
     source_url = Column(String(1024), default="")
     created_at = Column(DateTime, default=datetime.utcnow)
     firm = relationship("FundManagerProfile", back_populates="deals")
 
 
 class Person(Base):
-    """Leadership / partners table, joined to a firm."""
     __tablename__ = "people"
     id = Column(Integer, primary_key=True)
     firm_id = Column(Integer, ForeignKey("fund_managers.id"), index=True, nullable=False)
@@ -64,8 +65,6 @@ class Person(Base):
 
 
 class Finding(Base):
-    """Raw sourced facts from the research node. Kept as rows (not just JSON)
-    so we can retrieve by keyword for the ask-this-profile chat."""
     __tablename__ = "findings"
     id = Column(Integer, primary_key=True)
     firm_id = Column(Integer, ForeignKey("fund_managers.id"), index=True, nullable=False)
@@ -81,6 +80,16 @@ Index("ix_deals_company_key", Deal.company_name_key)
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    # cheap in-place migration for the new columns (idempotent, ignores if exists)
+    from sqlalchemy import text
+    with engine.begin() as conn:
+        for stmt in (
+            "ALTER TABLE fund_managers ADD COLUMN investment_thesis TEXT DEFAULT ''",
+            "ALTER TABLE fund_managers ADD COLUMN takeaway TEXT DEFAULT ''",
+            "ALTER TABLE fund_managers ADD COLUMN analyst_notes TEXT DEFAULT ''",
+        ):
+            try: conn.execute(text(stmt))
+            except Exception: pass
 
 
 def get_db():

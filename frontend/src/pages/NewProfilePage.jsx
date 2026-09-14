@@ -4,7 +4,7 @@ import PipelineStatus from "../components/PipelineStatus.jsx";
 import ProfileView from "../components/ProfileView.jsx";
 import ExportBar from "../components/ExportBar.jsx";
 
-export default function NewProfilePage({ initial, stream }) {
+export default function NewProfilePage({ initial, stream, onSelectFirm }) {
   const s = stream;
   return (
     <>
@@ -27,6 +27,10 @@ export default function NewProfilePage({ initial, stream }) {
         savedId={s.savedId}
         findings={s.findings}
         firmName={initial.firm_name}
+        takeaway={s.profile?._takeaway}
+        investmentThesis={s.profile?.investment_thesis}
+        managerId={s.savedId}
+        onSelectFirm={onSelectFirm}
       />
       {s.savedId != null && <ExportBar managerId={s.savedId} />}
     </>

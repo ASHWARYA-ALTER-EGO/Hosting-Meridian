@@ -2,6 +2,8 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ProfileHero from "./ProfileHero.jsx";
+import TakeawayCard from "./TakeawayCard.jsx";
+import Comparables from "./Comparables.jsx";
 
 function ConfChip({ conf }) {
   const c = (conf || "unknown").toLowerCase();
@@ -30,7 +32,10 @@ function Fact({ label, field }) {
   );
 }
 
-export default function ProfileView({ profile, profileMd, savedId, findings, firmName, updatedAt }) {
+export default function ProfileView({
+  profile, profileMd, savedId, findings, firmName, updatedAt,
+  takeaway, investmentThesis, managerId, firmKey, onSelectFirm, onDiligence,
+}) {
   const hasStruct = profile && typeof profile === "object";
   const summary = hasStruct ? (profile.what_to_watch || "") : "";
   const displayName = firmName || (hasStruct ? (profile.firm_name?.value || "Profile") : "Profile");
@@ -45,6 +50,14 @@ export default function ProfileView({ profile, profileMd, savedId, findings, fir
             savedId={savedId}
             updatedAt={updatedAt}
           />
+          <TakeawayCard
+            firmName={displayName}
+            thesis={investmentThesis || profile?.investment_thesis || ""}
+            takeaway={takeaway || profile?._takeaway || ""}
+          />
+          {managerId != null && (
+            <Comparables managerId={managerId} firmKey={firmKey} onSelectFirm={onSelectFirm} />
+          )}
 
           <div className="card">
             <div className="row space">
@@ -66,14 +79,19 @@ export default function ProfileView({ profile, profileMd, savedId, findings, fir
 
           {Array.isArray(profile.notable_portfolio) && profile.notable_portfolio.length > 0 && (
             <div className="card">
-              <div className="kicker">Portfolio</div>
+              <div className="kicker">Portfolio · click any company for cross-firm diligence</div>
               <h3>Notable investments</h3>
               <div className="pill-list">
                 {profile.notable_portfolio.map((p, i) => (
-                  <div className="pill-item" key={i}>
+                  <div className="pill-item pill-clickable" key={i}
+                       onClick={() => onDiligence?.(p.name)}
+                       title="Show every tracked firm that invested in this company">
                     <div><b>{p.name}</b></div>
                     <div className="pi-note">{p.note}</div>
-                    {p.source && <a href={p.source} target="_blank" rel="noreferrer" className="hint">source ↗</a>}
+                    <div className="row" onClick={(e) => e.stopPropagation()}>
+                      {p.source && <a href={p.source} target="_blank" rel="noreferrer" className="hint">source ↗</a>}
+                      <span className="hint dilig-hint" onClick={() => onDiligence?.(p.name)}>diligence →</span>
+                    </div>
                   </div>
                 ))}
               </div>

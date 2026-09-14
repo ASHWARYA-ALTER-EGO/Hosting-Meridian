@@ -13,6 +13,7 @@ from .routes.analytics import router as analytics_router
 from .routes.deals import router as deals_router
 from .routes.ask import router as ask_router
 from .routes.automation import router as automation_router
+from .routes.insights import router as insights_router
 
 setup_logging()
 
@@ -64,6 +65,7 @@ app.include_router(analytics_router)
 app.include_router(deals_router)
 app.include_router(ask_router)
 app.include_router(automation_router)
+app.include_router(insights_router)
 
 
 if __name__ == "__main__":
