@@ -19,8 +19,17 @@ export default function OverlapsView({ onSelectFirm }) {
   return (
     <>
       <div className="section-title">
-        <h2>Portfolio overlaps</h2>
-        <div className="sub">Companies backed by two or more firms in the tracker</div>
+        <div>
+          <div className="kicker">Cross-portfolio analysis</div>
+          <h2>Portfolio overlaps</h2>
+          <div className="sub">
+            Meridian cross-references every firm's <em>notable portfolio</em>
+            field and surfaces companies backed by two or more tracked funds.
+            Useful for spotting co-investment patterns, syndicate behaviour,
+            and consensus bets. Company names are normalised (Inc / Pvt Ltd
+            / Limited stripped) so variants collapse.
+          </div>
+        </div>
       </div>
 
       <div className="strip">
@@ -32,7 +41,7 @@ export default function OverlapsView({ onSelectFirm }) {
         <div className="strip-cell">
           <div className="strip-k">Most-shared</div>
           <div className="strip-v" style={{ fontSize: 22 }}>
-            {data.overlaps[0]?.company || "—"}
+            {data.overlaps[0]?.company || "-"}
           </div>
           <div className="strip-note">
             {data.overlaps[0] ? `${data.overlaps[0].firm_count} firms` : "add more firms to surface overlaps"}
@@ -75,7 +84,7 @@ export default function OverlapsView({ onSelectFirm }) {
                       <button className="linkish" onClick={() => onSelectFirm?.(f.firm_id)}>
                         {f.firm_name}
                       </button>
-                      {f.note && <span className="hint"> — {f.note}</span>}
+                      {f.note && <span className="hint"> · {f.note}</span>}
                       {f.source && (
                         <> · <a href={f.source} target="_blank" rel="noreferrer" className="hint">src</a></>
                       )}

@@ -1,9 +1,7 @@
-"""Pre-populate the tracker with a handful of real India/SEA fund managers.
+"""Pre-populate the tracker with 20 real India + SEA fund managers.
 
-Run: `python seed_managers.py` (from backend/) — requires .env with keys set.
-Each firm goes through the full pipeline (research → structure → write) and is
-upserted into the SQLite/Postgres database exactly as if the frontend had
-submitted it. Idempotent: re-running refreshes existing rows in place."""
+Run: `python seed_managers.py` from backend/, with .env keys set.
+Idempotent. Re-runs refresh rows in place."""
 import sys
 import time
 from app.database import init_db
@@ -11,18 +9,37 @@ from app.routes.evaluate import _upsert_profile
 from app.pipeline.graph import run_pipeline
 
 SEED_FIRMS = [
-    {"firm_name": "Peak XV Partners", "geography": "India / SEA", "stage_focus": "growth"},
-    {"firm_name": "Blume Ventures",   "geography": "India",       "stage_focus": "seed / series A"},
-    {"firm_name": "Kedaara Capital",  "geography": "India",       "stage_focus": "private equity / buyout"},
-    {"firm_name": "East Ventures",    "geography": "Southeast Asia (Indonesia)", "stage_focus": "seed / early"},
-    {"firm_name": "Openspace Ventures", "geography": "Southeast Asia (Singapore)", "stage_focus": "series A / growth"},
+    # India, VC
+    {"firm_name": "Peak XV Partners",      "geography": "India / SEA",  "stage_focus": "growth"},
+    {"firm_name": "Blume Ventures",        "geography": "India",        "stage_focus": "seed / series A"},
+    {"firm_name": "Elevation Capital",     "geography": "India",        "stage_focus": "early / growth"},
+    {"firm_name": "Accel India",           "geography": "India",        "stage_focus": "series A / B"},
+    {"firm_name": "3one4 Capital",         "geography": "India",        "stage_focus": "seed / series A"},
+    {"firm_name": "Chiratae Ventures",     "geography": "India",        "stage_focus": "early / growth"},
+    {"firm_name": "Nexus Venture Partners","geography": "India / US",   "stage_focus": "series A / B"},
+    {"firm_name": "Stellaris Venture Partners","geography":"India",     "stage_focus": "seed / series A"},
+    {"firm_name": "Prime Venture Partners","geography": "India",        "stage_focus": "seed / series A"},
+    # India, PE
+    {"firm_name": "Kedaara Capital",       "geography": "India",        "stage_focus": "PE / buyout"},
+    {"firm_name": "Multiples Alternate Asset Management","geography":"India","stage_focus":"PE / growth"},
+    {"firm_name": "ChrysCapital",          "geography": "India",        "stage_focus": "PE / growth"},
+    {"firm_name": "True North",            "geography": "India",        "stage_focus": "PE / mid-market"},
+    # SEA / pan-Asia
+    {"firm_name": "East Ventures",         "geography": "Indonesia / SEA","stage_focus":"seed / early"},
+    {"firm_name": "Openspace Ventures",    "geography": "Singapore / SEA","stage_focus":"series A / growth"},
+    {"firm_name": "Jungle Ventures",       "geography": "Singapore / India","stage_focus":"series A / B"},
+    {"firm_name": "Vertex Ventures Southeast Asia and India","geography":"Singapore","stage_focus":"seed / series B"},
+    {"firm_name": "Golden Gate Ventures",  "geography": "Southeast Asia","stage_focus":"seed / early"},
+    {"firm_name": "Monk's Hill Ventures",  "geography": "Southeast Asia","stage_focus":"series A"},
+    {"firm_name": "AC Ventures",           "geography": "Indonesia",    "stage_focus": "seed / series A"},
 ]
 
 
 def main():
     init_db()
+    total = len(SEED_FIRMS)
     for i, f in enumerate(SEED_FIRMS, 1):
-        print(f"\n=== [{i}/{len(SEED_FIRMS)}] {f['firm_name']} ===")
+        print(f"\n=== [{i}/{total}] {f['firm_name']} ===")
         t0 = time.time()
 
         def emit(ev):

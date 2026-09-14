@@ -1,9 +1,13 @@
 import json
 import re
+import time
 from typing import List, Dict
 from ..llm import ask_llm
 from ..search import web_search
+from ..logging_setup import get_logger
 from .state import PipelineState
+
+log = get_logger("pipeline.research")
 
 
 QUERY_SYSTEM = """You generate web search queries to research a PE/VC fund manager.
@@ -57,6 +61,8 @@ def generate_queries(firm: str, geography: str, sector: str, stage: str) -> List
 
 def run_research(state: PipelineState, emit) -> PipelineState:
     firm = state["firm_name"]
+    t0 = time.time()
+    log.info(f"research start firm={firm!r}")
     emit({"type": "phase", "phase": "research",
           "status": f"Generating targeted queries for {firm}…"})
     queries = generate_queries(
@@ -98,4 +104,5 @@ def run_research(state: PipelineState, emit) -> PipelineState:
     state["queries"] = queries
     state["search_results"] = top
     state["findings"] = findings
+    log.info(f"research done  firm={firm!r} findings={len(findings)} elapsed={time.time()-t0:.1f}s")
     return state

@@ -10,7 +10,7 @@ const SORT_OPTIONS = [
 ];
 
 function fmtDate(iso) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
@@ -102,7 +102,7 @@ export default function TrackerTable({ refreshKey, onSelect, onNew, onRowsChange
           <div className="empty">
             <div className="empty-title">No firms in the tracker yet</div>
             <div className="hint" style={{ marginBottom: 16 }}>
-              Profile your first fund manager and it will land here — sortable,
+              Profile your first fund manager and it will land here: sortable,
               filterable, refreshable in place.
             </div>
             <button className="btn" onClick={onNew}>+ Profile the first firm</button>
@@ -133,16 +133,16 @@ export default function TrackerTable({ refreshKey, onSelect, onNew, onRowsChange
                       {r.summary && <div className="firm-sub">{r.summary}</div>}
                     </td>
                     <td onClick={() => onSelect(r.id)}>
-                      {r.geography_focus ? <span className="chip chip-geo">{r.geography_focus}</span> : "—"}
+                      {r.geography_focus ? <span className="chip chip-geo">{r.geography_focus}</span> : "-"}
                     </td>
-                    <td onClick={() => onSelect(r.id)}>{r.headquarters || "—"}</td>
-                    <td onClick={() => onSelect(r.id)} className="num">{r.aum_display || "—"}</td>
+                    <td onClick={() => onSelect(r.id)}>{r.headquarters || "-"}</td>
+                    <td onClick={() => onSelect(r.id)} className="num">{r.aum_display || "-"}</td>
                     <td onClick={() => onSelect(r.id)}>
                       {r.sectors
                         ? r.sectors.split(",").slice(0, 3).map((s, i) => (
                             <span className="chip chip-sector" key={i} style={{ marginRight: 4 }}>{s.trim()}</span>
                           ))
-                        : "—"}
+                        : "-"}
                     </td>
                     <td onClick={() => onSelect(r.id)} className="hint">{fmtDate(r.updated_at)}</td>
                   </tr>

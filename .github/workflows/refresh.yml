@@ -1,0 +1,31 @@
+name: Weekly refresh
+
+# Re-profiles every firm older than 7 days by hitting the backend's
+# /api/refresh endpoint. Runs Monday 04:00 UTC. Also triggerable manually.
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit /api/refresh
+        env:
+          URL: ${{ secrets.MERIDIAN_API_URL }}
+          KEY: ${{ secrets.MERIDIAN_API_KEY }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then
+            echo "Missing MERIDIAN_API_URL or MERIDIAN_API_KEY repo secret" >&2
+            exit 1
+          fi
+          echo "POST $URL/api/refresh"
+          http_code=$(curl -s -o /tmp/body -w "%{http_code}" \
+            -X POST "$URL/api/refresh" \
+            -H "X-API-Key: $KEY" \
+            -H "Content-Type: application/json")
+          echo "HTTP $http_code"
+          cat /tmp/body
+          if [ "$http_code" != "200" ]; then exit 1; fi

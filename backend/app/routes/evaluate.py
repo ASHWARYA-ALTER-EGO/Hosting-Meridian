@@ -3,14 +3,26 @@ import json
 import queue
 import threading
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from datetime import datetime
 
-from ..database import get_db, SessionLocal, FundManagerProfile
+import re
+from ..database import get_db, SessionLocal, FundManagerProfile, Deal, Person, Finding
 from ..pipeline.graph import run_pipeline
+from ..security import limiter, require_api_key
+from ..logging_setup import get_logger
+
+log = get_logger("evaluate")
+
+
+def _norm_company(name: str) -> str:
+    s = (name or "").lower().strip()
+    s = re.sub(r"[.,'`\"’]", "", s)
+    s = re.sub(r"\s+(inc|ltd|pvt|private limited|limited|corp|llc|co)\b\.?", "", s)
+    return re.sub(r"\s+", " ", s).strip()
 
 router = APIRouter()
 _SENTINEL = object()
@@ -68,6 +80,63 @@ def _upsert_profile(final_state: dict) -> int:
             db.add(row)
         db.commit()
         db.refresh(row)
+
+        # ---------- Sync first-class rows: deals, people, findings ----------
+        # Wipe & repopulate so a refresh replaces stale rows cleanly.
+        db.query(Deal).filter(Deal.firm_id == row.id).delete()
+        db.query(Person).filter(Person.firm_id == row.id).delete()
+        db.query(Finding).filter(Finding.firm_id == row.id).delete()
+
+        # Deals from notable_portfolio + recent_activity
+        for p in (profile.get("notable_portfolio") or []):
+            if isinstance(p, dict) and (p.get("name") or "").strip():
+                db.add(Deal(
+                    firm_id=row.id,
+                    company_name=str(p.get("name",""))[:255],
+                    company_name_key=_norm_company(str(p.get("name",""))),
+                    kind="investment",
+                    note=str(p.get("note",""))[:2000],
+                    source_url=str(p.get("source",""))[:1024],
+                ))
+        for a in (profile.get("recent_activity") or []):
+            if isinstance(a, dict) and (a.get("item") or "").strip():
+                text = str(a.get("item",""))
+                kind = "fund_close" if any(w in text.lower() for w in ["closed","raises","raised","fund"]) \
+                    else "exit" if any(w in text.lower() for w in ["exit","ipo","acquisition","sold"]) \
+                    else "leadership" if any(w in text.lower() for w in ["partner","hire","appoint","leaves","joins"]) \
+                    else "other"
+                db.add(Deal(
+                    firm_id=row.id,
+                    company_name="",
+                    company_name_key="",
+                    kind=kind,
+                    note=text[:2000],
+                    date_str=str(a.get("date",""))[:32],
+                    source_url=str(a.get("source",""))[:1024],
+                ))
+        # People
+        for p in (profile.get("leadership") or []):
+            if isinstance(p, dict) and (p.get("name") or "").strip():
+                db.add(Person(
+                    firm_id=row.id,
+                    name=str(p.get("name",""))[:255],
+                    role=str(p.get("role",""))[:255],
+                    source_url=str(p.get("source",""))[:1024],
+                ))
+        # Raw findings (for ask-this-profile chat)
+        for f in (final_state.get("findings") or []):
+            if isinstance(f, dict) and (f.get("fact") or "").strip():
+                db.add(Finding(
+                    firm_id=row.id,
+                    topic=str(f.get("topic","other"))[:64],
+                    fact=str(f.get("fact",""))[:4000],
+                    source_url=str(f.get("source_url",""))[:1024],
+                ))
+        db.commit()
+        log.info(f"upserted firm_id={row.id} firm={firm} "
+                 f"deals={len(profile.get('notable_portfolio') or [])+len(profile.get('recent_activity') or [])} "
+                 f"people={len(profile.get('leadership') or [])} "
+                 f"findings={len(final_state.get('findings') or [])}")
         return row.id
     finally:
         db.close()
@@ -92,8 +161,9 @@ def _worker(req: ProfileRequest, q: "queue.Queue"):
         q.put(_SENTINEL)
 
 
-@router.post("/api/profile")
-def profile(req: ProfileRequest):
+@router.post("/api/profile", dependencies=[Depends(require_api_key)])
+@limiter.limit("5/minute")
+def profile(request: Request, req: ProfileRequest):
     q: "queue.Queue" = queue.Queue()
     threading.Thread(target=_worker, args=(req, q), daemon=True).start()
 
@@ -111,7 +181,9 @@ def profile(req: ProfileRequest):
 
 
 @router.get("/api/managers")
+@limiter.limit("60/minute")
 def list_managers(
+    request: Request,
     db: Session = Depends(get_db),
     geography: Optional[str] = Query(default=None),
     sector: Optional[str] = Query(default=None),
@@ -156,7 +228,8 @@ def list_managers(
 
 
 @router.get("/api/managers/{mid}")
-def get_manager(mid: int, db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+def get_manager(mid: int, request: Request, db: Session = Depends(get_db)):
     r = db.query(FundManagerProfile).filter(FundManagerProfile.id == mid).first()
     if not r: raise HTTPException(status_code=404, detail="Not found")
     return {

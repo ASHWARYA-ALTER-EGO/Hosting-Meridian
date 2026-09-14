@@ -1,6 +1,7 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import ProfileHero from "./ProfileHero.jsx";
 
 function ConfChip({ conf }) {
   const c = (conf || "unknown").toLowerCase();
@@ -38,27 +39,12 @@ export default function ProfileView({ profile, profileMd, savedId, findings, fir
     <>
       {hasStruct && (
         <>
-          <div className="profile-hero fade-in">
-            <div className="row space" style={{ alignItems: "flex-start" }}>
-              <div>
-                <div className="kicker">Structured profile{savedId != null && <> · saved as #{savedId}</>}</div>
-                <h1>{displayName}</h1>
-                {summary && <div className="summary">{summary}</div>}
-                <div className="meta">
-                  {profile.geography_focus?.value && (
-                    <span className="chip chip-geo">{profile.geography_focus.value}</span>
-                  )}
-                  {(Array.isArray(profile.sectors?.value) ? profile.sectors.value : []).slice(0, 3).map((s, i) => (
-                    <span key={i} className="chip chip-sector">{s}</span>
-                  ))}
-                  {(Array.isArray(profile.stages?.value) ? profile.stages.value : []).slice(0, 3).map((s, i) => (
-                    <span key={i} className="chip chip-stage">{s}</span>
-                  ))}
-                  {updatedAt && <span className="chip">updated {new Date(updatedAt).toLocaleDateString()}</span>}
-                </div>
-              </div>
-            </div>
-          </div>
+          <ProfileHero
+            profile={profile}
+            firmName={displayName}
+            savedId={savedId}
+            updatedAt={updatedAt}
+          />
 
           <div className="card">
             <div className="row space">
@@ -116,7 +102,7 @@ export default function ProfileView({ profile, profileMd, savedId, findings, fir
               <div className="pill-list">
                 {profile.recent_activity.map((p, i) => (
                   <div className="pill-item" key={i}>
-                    <div><span className="mono hint">{p.date || "—"}</span></div>
+                    <div><span className="mono hint">{p.date || "-"}</span></div>
                     <div className="pi-note">{p.item}</div>
                     {p.source && <a href={p.source} target="_blank" rel="noreferrer" className="hint">source ↗</a>}
                   </div>

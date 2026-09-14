@@ -1,5 +1,9 @@
+import time
 from ..llm import stream_llm
+from ..logging_setup import get_logger
 from .state import PipelineState
+
+log = get_logger("pipeline.write")
 
 
 WRITER_SYSTEM = """You write a one-page profile of a PE/VC fund manager for an internal intelligence tracker.
@@ -45,6 +49,9 @@ def _build_user(state: PipelineState) -> str:
 
 def run_writer(state: PipelineState, emit) -> PipelineState:
     emit({"type": "phase", "phase": "write", "status": "Writing profile…"})
+    t0 = time.time()
+    firm = state.get("firm_name","?")
+    log.info(f"write start     firm={firm!r}")
     parts = []
     for chunk in stream_llm(WRITER_SYSTEM, [{"role": "user", "content": _build_user(state)}],
                             max_tokens=2500, temperature=0.3):
@@ -62,4 +69,5 @@ def run_writer(state: PipelineState, emit) -> PipelineState:
     state["profile_md"] = md
     state["summary"] = summary[:1024]
     emit({"type": "report_done", "profile_md": md, "summary": summary})
+    log.info(f"write done      firm={firm!r} chars={len(md)} elapsed={time.time()-t0:.1f}s")
     return state

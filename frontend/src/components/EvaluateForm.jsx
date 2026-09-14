@@ -1,18 +1,25 @@
 import React, { useState } from "react";
 
 const EXAMPLES = [
-  { name: "Peak XV Partners",   geo: "India / SEA",  stage: "growth" },
-  { name: "Blume Ventures",     geo: "India",        stage: "seed / series A" },
-  { name: "Kedaara Capital",    geo: "India",        stage: "private equity / buyout" },
-  { name: "East Ventures",      geo: "Southeast Asia (Indonesia)", stage: "seed / early" },
-  { name: "Openspace Ventures", geo: "Southeast Asia (Singapore)", stage: "series A / growth" },
+  { name: "Peak XV Partners",     geo: "India / SEA",  stage: "growth",           tag: "$9B+ AUM · ex-Sequoia India" },
+  { name: "Blume Ventures",       geo: "India",        stage: "seed / series A",  tag: "Bengaluru · early-stage" },
+  { name: "Kedaara Capital",      geo: "India",        stage: "PE / buyout",      tag: "Mumbai · mid-market PE" },
+  { name: "East Ventures",        geo: "Indonesia",    stage: "seed / early",     tag: "Jakarta · SEA seed leader" },
+  { name: "Openspace Ventures",   geo: "Singapore",    stage: "series A / growth", tag: "Singapore · SEA growth" },
+  { name: "Elevation Capital",    geo: "India",        stage: "early / growth",   tag: "Gurgaon · consumer + fintech" },
+  { name: "Accel India",          geo: "India",        stage: "series A / B",     tag: "Bengaluru · Flipkart backer" },
+  { name: "3one4 Capital",        geo: "India",        stage: "seed / series A",  tag: "Bengaluru · founder-led" },
+  { name: "Jungle Ventures",      geo: "Singapore / India", stage: "series A / B", tag: "Singapore · pan-Asian" },
+  { name: "Vertex Ventures SEA",  geo: "SEA",          stage: "seed / series B",  tag: "Singapore · Temasek-backed" },
+  { name: "Chiratae Ventures",    geo: "India",        stage: "early / growth",   tag: "Bengaluru · deep-tech" },
+  { name: "Multiples Alternate",  geo: "India",        stage: "PE / growth",      tag: "Mumbai · Renuka Ramnath" },
 ];
 
 export default function ProfileForm({ initial = {}, onSubmit, running, onCancel }) {
-  const [firm, setFirm] = useState(initial.firm_name || "");
-  const [geo, setGeo] = useState(initial.geography || "");
+  const [firm, setFirm]     = useState(initial.firm_name || "");
+  const [geo, setGeo]       = useState(initial.geography || "");
   const [sector, setSector] = useState(initial.sector_focus || "");
-  const [stage, setStage] = useState(initial.stage_focus || "");
+  const [stage, setStage]   = useState(initial.stage_focus || "");
 
   const pick = (ex) => { setFirm(ex.name); setGeo(ex.geo); setStage(ex.stage); };
 
@@ -71,11 +78,22 @@ export default function ProfileForm({ initial = {}, onSubmit, running, onCancel 
 
       <div className="divider" />
       <div>
-        <div className="lbl" style={{ marginBottom: 8 }}>Try an example</div>
-        <div className="row">
+        <div className="row space" style={{ marginBottom: 10 }}>
+          <div className="lbl">Try one of these fund managers</div>
+          <span className="hint">{EXAMPLES.length} to choose from · scroll →</span>
+        </div>
+        <div className="examples-scroll">
           {EXAMPLES.map((ex, i) => (
-            <button key={i} type="button" className="tnav-btn"
-                    onClick={() => pick(ex)}>{ex.name}</button>
+            <button key={i} type="button" className="example-card"
+                    onClick={() => pick(ex)}
+                    title={`Prefill form with ${ex.name}`}>
+              <div className="ex-name">{ex.name}</div>
+              <div className="ex-tag">{ex.tag}</div>
+              <div className="ex-meta">
+                <span className="chip chip-geo">{ex.geo}</span>
+                <span className="chip chip-stage">{ex.stage}</span>
+              </div>
+            </button>
           ))}
         </div>
       </div>

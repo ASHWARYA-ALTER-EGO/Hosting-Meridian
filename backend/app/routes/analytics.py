@@ -11,11 +11,12 @@ import io
 import json
 import re
 from typing import Dict, List, Tuple, Any
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, Response
 from sqlalchemy.orm import Session
 
 from ..database import get_db, FundManagerProfile
+from ..security import limiter
 
 router = APIRouter()
 
@@ -34,7 +35,8 @@ def _val(field, default=""):
 
 # ---------------------------------------------------------------- COMPARE
 @router.get("/api/compare")
-def compare(ids: str = Query(...), db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def compare(request: Request, ids: str = Query(...), db: Session = Depends(get_db)):
     try:
         id_list = [int(x) for x in ids.split(",") if x.strip()]
     except ValueError:
@@ -67,7 +69,8 @@ def _norm_company(name: str) -> str:
 
 
 @router.get("/api/overlaps")
-def overlaps(db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def overlaps(request: Request, db: Session = Depends(get_db)):
     rows = db.query(FundManagerProfile).all()
     bucket: Dict[str, Dict[str, Any]] = {}
 
@@ -124,7 +127,9 @@ def _date_key(s: str) -> Tuple[int, int, int]:
 
 
 @router.get("/api/activity")
+@limiter.limit("30/minute")
 def activity(
+    request: Request,
     geography: str = Query(default=""),
     firm: str = Query(default=""),
     limit: int = Query(default=200),
@@ -172,7 +177,8 @@ def _fetch(db: Session, mid: int) -> FundManagerProfile:
 
 
 @router.get("/api/managers/{mid}/export.csv")
-def export_csv(mid: int, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def export_csv(mid: int, request: Request, db: Session = Depends(get_db)):
     r = _fetch(db, mid)
     profile = _profile_of(r)
     buf = io.StringIO()
@@ -225,7 +231,8 @@ def export_csv(mid: int, db: Session = Depends(get_db)):
 
 
 @router.get("/api/managers/{mid}/export.md", response_class=PlainTextResponse)
-def export_md(mid: int, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def export_md(mid: int, request: Request, db: Session = Depends(get_db)):
     r = _fetch(db, mid)
     md = r.profile_md or f"# {r.firm_name}\n\n(No profile generated.)"
     slug = re.sub(r"[^A-Za-z0-9]+", "-", r.firm_name.lower()).strip("-")

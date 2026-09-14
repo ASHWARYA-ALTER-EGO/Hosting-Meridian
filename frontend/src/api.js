@@ -1,9 +1,25 @@
-import { API_BASE_URL } from "./config";
+import { API_BASE_URL, authHeaders } from "./config";
 
 async function jget(path) {
   const res = await fetch(`${API_BASE_URL}${path}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
+}
+
+export async function askProfile(managerId, question) {
+  const res = await fetch(`${API_BASE_URL}/api/managers/${managerId}/ask`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ question }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function listDeals(params = {}) {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v) qs.set(k, v);
+  return jget(`/api/deals?${qs.toString()}`);
 }
 
 export async function listManagers(params = {}) {

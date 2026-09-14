@@ -6,10 +6,10 @@ function ConfChip({ conf }) {
   return <span className={`chip dot chip-conf-${c}`}>{c}</span>;
 }
 function valOf(f) {
-  if (!f) return "—";
+  if (!f) return "-";
   const v = f.value;
-  if (v == null || v === "") return "—";
-  return Array.isArray(v) ? (v.length ? v.join(", ") : "—") : String(v);
+  if (v == null || v === "") return "-";
+  return Array.isArray(v) ? (v.length ? v.join(", ") : "-") : String(v);
 }
 
 const ROWS = [
@@ -97,10 +97,10 @@ export default function CompareView({ ids, onBack }) {
                       <ul className="cmp-list">
                         {(f.profile?.notable_portfolio || []).slice(0, 6).map((p, i) => (
                           <li key={i}>
-                            <b>{p.name}</b>{p.note ? <span className="hint"> — {p.note}</span> : null}
+                            <b>{p.name}</b>{p.note ? <span className="hint"> · {p.note}</span> : null}
                           </li>
                         ))}
-                        {!(f.profile?.notable_portfolio || []).length && <li className="hint">—</li>}
+                        {!(f.profile?.notable_portfolio || []).length && <li className="hint">-</li>}
                       </ul>
                     </td>
                   ))}
@@ -115,7 +115,7 @@ export default function CompareView({ ids, onBack }) {
                             <b>{p.name}</b>{p.role ? <span className="hint">, {p.role}</span> : null}
                           </li>
                         ))}
-                        {!(f.profile?.leadership || []).length && <li className="hint">—</li>}
+                        {!(f.profile?.leadership || []).length && <li className="hint">-</li>}
                       </ul>
                     </td>
                   ))}
@@ -124,7 +124,7 @@ export default function CompareView({ ids, onBack }) {
                   <td className="cmp-lbl">What to watch</td>
                   {firms.map(f => (
                     <td key={f.id}>
-                      <div className="cmp-watch">{f.profile?.what_to_watch || "—"}</div>
+                      <div className="cmp-watch">{f.profile?.what_to_watch || "-"}</div>
                     </td>
                   ))}
                 </tr>

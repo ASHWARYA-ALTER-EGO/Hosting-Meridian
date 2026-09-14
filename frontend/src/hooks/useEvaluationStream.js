@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { API_BASE_URL } from "../config";
+import { API_BASE_URL, authHeaders } from "../config";
 
 /** Consume /api/profile SSE. Adapted from MARA useLiveStream pattern. */
 export function useProfileStream() {
@@ -31,7 +31,7 @@ export function useProfileStream() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/profile`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ firm_name, geography, sector_focus, stage_focus }),
         signal: controller.signal,
       });

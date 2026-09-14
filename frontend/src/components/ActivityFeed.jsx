@@ -27,8 +27,42 @@ export default function ActivityFeed({ onSelectFirm }) {
   return (
     <>
       <div className="section-title">
-        <h2>Deals &amp; activity</h2>
-        <div className="sub">A live cross-firm view of the private market · reverse-chronological</div>
+        <div>
+          <div className="kicker">Cross-firm feed</div>
+          <h2>Deals &amp; activity</h2>
+          <div className="sub">
+            A single reverse-chronological view of every recent event captured
+            in the tracker: fund closes, notable investments, exits, leadership
+            moves. Filter by geography or firm; click any firm name to jump
+            straight to its profile.
+          </div>
+        </div>
+      </div>
+      <div className="strip">
+        <div className="strip-cell">
+          <div className="strip-k">Events tracked</div>
+          <div className="strip-v">{data.total}</div>
+          <div className="strip-note">across all profiled firms</div>
+        </div>
+        <div className="strip-cell">
+          <div className="strip-k">Geographies</div>
+          <div className="strip-v">{data.geographies.length}</div>
+          <div className="strip-note">{data.geographies.slice(0,3).join(", ") || "-"}</div>
+        </div>
+        <div className="strip-cell">
+          <div className="strip-k">Years covered</div>
+          <div className="strip-v">
+            {new Set(data.events.map(e => (e.date || "").slice(0,4)).filter(Boolean)).size || "-"}
+          </div>
+          <div className="strip-note">distinct calendar years</div>
+        </div>
+        <div className="strip-cell">
+          <div className="strip-k">Most recent</div>
+          <div className="strip-v" style={{ fontSize: 22 }}>
+            {data.events[0]?.date || "-"}
+          </div>
+          <div className="strip-note">{data.events[0]?.firm_name || "no events yet"}</div>
+        </div>
       </div>
 
       <div className="card raise">
@@ -66,7 +100,7 @@ export default function ActivityFeed({ onSelectFirm }) {
                 <div className="tl-events">
                   {events.map((e, i) => (
                     <div className="tl-event" key={i}>
-                      <div className="tl-date">{e.date || "—"}</div>
+                      <div className="tl-date">{e.date || "-"}</div>
                       <div className="tl-dot" />
                       <div className="tl-body">
                         <div className="tl-headline">

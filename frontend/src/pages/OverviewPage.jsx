@@ -1,5 +1,6 @@
 import React from "react";
 import Hero from "../components/Hero.jsx";
+import WhatItDoes from "../components/WhatItDoes.jsx";
 import PipelineExplainer from "../components/PipelineExplainer.jsx";
 import TrackerTable from "../components/TrackerTable.jsx";
 import TrustSection from "../components/TrustSection.jsx";
@@ -10,6 +11,7 @@ export default function OverviewPage({
   return (
     <>
       <Hero onProfile={onProfile} onExplore={onExplore} />
+      <WhatItDoes />
       <PipelineExplainer />
       <TrackerTable
         refreshKey={refreshKey}

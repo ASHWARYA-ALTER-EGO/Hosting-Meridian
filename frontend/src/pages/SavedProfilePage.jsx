@@ -1,6 +1,7 @@
 import React from "react";
 import ProfileView from "../components/ProfileView.jsx";
 import ExportBar from "../components/ExportBar.jsx";
+import AskChat from "../components/AskChat.jsx";
 
 export default function SavedProfilePage({ savedRow, onBack, onRefresh }) {
   if (!savedRow) return null;
@@ -29,6 +30,7 @@ export default function SavedProfilePage({ savedRow, onBack, onRefresh }) {
         firmName={savedRow.firm_name}
         updatedAt={savedRow.updated_at}
       />
+      <AskChat managerId={savedRow.id} firmName={savedRow.firm_name} />
       <ExportBar managerId={savedRow.id} />
     </>
   );

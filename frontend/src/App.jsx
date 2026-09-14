@@ -7,6 +7,7 @@ import OverlapsPage from "./pages/OverlapsPage.jsx";
 import NewProfilePage from "./pages/NewProfilePage.jsx";
 import SavedProfilePage from "./pages/SavedProfilePage.jsx";
 import ComparePage from "./pages/ComparePage.jsx";
+import DealsPage from "./pages/DealsPage.jsx";
 import { useProfileStream } from "./hooks/useEvaluationStream.js";
 import { getManager } from "./api";
 
@@ -33,6 +34,7 @@ export default function App() {
   const goHome     = () => { setView("home"); scrollTop(); };
   const goOverlaps = () => { setView("overlaps"); scrollTop(); };
   const goActivity = () => { setView("activity"); scrollTop(); };
+  const goDeals    = () => { setView("deals");    scrollTop(); };
   const goCompare  = (ids) => { setCompareIds(ids); setView("compare"); scrollTop(); };
 
   const onRowsChange = useCallback((rows) => setTrackerRows(rows), []);
@@ -41,9 +43,11 @@ export default function App() {
     <button className={`tnav-btn ${extra} ${view === key ? "active" : ""}`} onClick={onClick}>{label}</button>
   );
 
+  const onHero = view === "home";
+
   return (
-    <div className="shell">
-      <nav className="topnav no-print">
+    <div className={`shell ${onHero ? "shell--home" : ""}`}>
+      <nav className={`topnav no-print ${onHero ? "topnav--on-hero" : ""}`}>
         <div className="brand" role="button" onClick={goHome} style={{ cursor: "pointer" }}>
           <div className="brand-mark"><BrandMark /></div>
           <div>
@@ -54,6 +58,7 @@ export default function App() {
         <div className="topnav-right">
           {navBtn("home",     "Overview", goHome)}
           {navBtn("tracker",  "Tracker",  goTracker)}
+          {navBtn("deals",    "Deals",    goDeals)}
           {navBtn("activity", "Activity", goActivity)}
           {navBtn("overlaps", "Overlaps", goOverlaps)}
           {navBtn("profile",  "+ New profile", () => goNew(), "primary")}
@@ -81,6 +86,7 @@ export default function App() {
       )}
       {view === "activity" && <ActivityPage onSelect={openSaved} />}
       {view === "overlaps" && <OverlapsPage onSelect={openSaved} />}
+      {view === "deals"    && <DealsPage    onSelectFirm={openSaved} />}
       {view === "compare"  && <ComparePage ids={compareIds} onBack={goTracker} />}
       {view === "profile"  && <NewProfilePage initial={initial} stream={s} />}
       {view === "saved" && savedRow && (

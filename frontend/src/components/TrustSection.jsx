@@ -4,7 +4,7 @@ const ITEMS = [
   {
     n: "01",
     title: "Sourced or silent",
-    desc: "Every non-empty field cites a specific URL from the research pass. If nothing supports a claim, the field renders as an em-dash — never as an unattributed guess.",
+    desc: "Every non-empty field cites a specific URL from the research pass. If nothing supports a claim, the field renders as a dash, never as an unattributed guess.",
   },
   {
     n: "02",
@@ -14,7 +14,7 @@ const ITEMS = [
   {
     n: "03",
     title: "A tracker, not a lookup",
-    desc: "Every profile is upserted to a real relational store. Re-run the same firm a month later and the record is refreshed in place — the way a live intelligence base actually works.",
+    desc: "Every profile is upserted to a real relational store. Re-run the same firm a month later and the record is refreshed in place, the way a live intelligence base actually works.",
   },
 ];
 

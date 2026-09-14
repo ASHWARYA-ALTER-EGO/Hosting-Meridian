@@ -1,7 +1,7 @@
 import React from "react";
 
 function fmtAgo(iso) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(iso);
   const s = Math.floor((Date.now() - d.getTime()) / 1000);
   if (s < 60)   return `${s}s ago`;
@@ -24,11 +24,11 @@ export default function StatStrip({ rows = [] }) {
   }
   const aumDisplay = aumCount > 0
     ? (aumSum >= 1000 ? `$${(aumSum/1000).toFixed(1)}B+` : `$${aumSum.toFixed(0)}M+`)
-    : "—";
+    : "-";
 
   const cells = [
-    { k: "Firms tracked",   v: firms.toString(),         n: firms === 0 ? "empty — profile one" : "profiles saved" },
-    { k: "Geographies",     v: geos.size.toString(),     n: [...geos].slice(0,3).join(", ") || "—" },
+    { k: "Firms tracked",   v: firms.toString(),         n: firms === 0 ? "empty · profile one" : "profiles saved" },
+    { k: "Geographies",     v: geos.size.toString(),     n: [...geos].slice(0,3).join(", ") || "-" },
     { k: "Sector coverage", v: sectors.size.toString(),  n: [...sectors].slice(0,2).join(", ") + (sectors.size > 2 ? "…" : "") },
     { k: "Aggregate AUM",   v: aumDisplay,               n: aumCount > 0 ? `across ${aumCount} sourced` : "not yet extracted" },
   ];

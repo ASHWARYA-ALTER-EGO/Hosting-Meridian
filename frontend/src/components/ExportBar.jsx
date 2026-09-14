@@ -8,7 +8,7 @@ export default function ExportBar({ managerId }) {
       <div className="row space">
         <div>
           <div className="kicker">Export</div>
-          <div className="hint">Take this profile with you — spreadsheet, doc, or PDF.</div>
+          <div className="hint">Take this profile with you as a spreadsheet, doc, or PDF.</div>
         </div>
         <div className="row">
           <a className="btn ghost sm" href={exportUrl(managerId, "csv")} download>

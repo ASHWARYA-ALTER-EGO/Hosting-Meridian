@@ -3,9 +3,13 @@ with per-field confidence + source URL. Replaces the evaluator role from the
 generic build-vs-buy pipeline."""
 import json
 import re
+import time
 from typing import Dict, Any, Optional
 from ..llm import ask_llm
+from ..logging_setup import get_logger
 from .state import PipelineState
+
+log = get_logger("pipeline.structure")
 
 
 STRUCTURE_SYSTEM = """You convert sourced findings about a PE/VC fund manager into a strict structured profile.
@@ -56,6 +60,8 @@ def _parse_aum_usd_m(aum_display: str) -> Optional[float]:
 def run_structuring(state: PipelineState, emit) -> PipelineState:
     emit({"type": "phase", "phase": "structure", "status": "Structuring profile…"})
     firm = state["firm_name"]
+    t0 = time.time()
+    log.info(f"structure start firm={firm!r}")
     findings = state.get("findings", [])
     findings_block = "\n".join(
         f"- [{f['topic']}] {f['fact']}  <src:{f['source_url']}>" for f in findings
@@ -96,4 +102,5 @@ def run_structuring(state: PipelineState, emit) -> PipelineState:
 
     state["profile"] = profile
     emit({"type": "profile", "profile": profile})
+    log.info(f"structure done  firm={firm!r} elapsed={time.time()-t0:.1f}s")
     return state
