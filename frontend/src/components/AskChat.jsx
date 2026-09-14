@@ -38,15 +38,20 @@ export default function AskChat({ managerId, firmName }) {
     <div className="card ask">
       <div className="row space">
         <div>
-          <div className="kicker">Ask this profile</div>
+          <div className="kicker">Ask this profile · retrieval-augmented generation</div>
           <h3>Chat with {firmName}'s sourced findings</h3>
         </div>
-        <span className="badge">RAG · sourced only</span>
+        <div className="rag-badge">
+          <span className="rag-dot" />
+          <span className="rag-label">RAG</span>
+          <span className="rag-sub">retrieval over sourced findings only</span>
+        </div>
       </div>
       <div className="sub">
-        Answers are built from the same source-linked findings that power the
-        profile. If the findings do not contain the answer, the assistant will
-        say so instead of guessing.
+        Every answer is generated from this firm's own sourced findings, ranked
+        by keyword overlap with your question and cited inline as [1], [2].
+        The assistant is instructed to say <em>"the findings do not contain the answer"</em>
+        rather than invent, so nothing here is hallucinated from the open web.
       </div>
 
       {messages.length === 0 && (
