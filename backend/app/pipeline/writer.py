@@ -1,0 +1,65 @@
+from ..llm import stream_llm
+from .state import PipelineState
+
+
+WRITER_SYSTEM = """You write a one-page profile of a PE/VC fund manager for an internal intelligence tracker.
+
+Output ONE clean Markdown document with EXACTLY this structure:
+
+# {Firm name}
+*{One-sentence summary — geography, stage, thesis in a line.}*
+
+## Fact sheet
+| Field | Value | Confidence | Source |
+|---|---|---|---|
+| Headquarters | ... | verified/inferred/unknown | link |
+| Geography focus | ... | ... | link |
+| AUM | ... | ... | link |
+| Fund vintages | ... | ... | link |
+| Sectors | ... | ... | link |
+| Stages | ... | ... | link |
+
+## Notable portfolio
+- **Company** — note. ([source](url))
+
+## Leadership
+- **Name**, Role. ([source](url))
+
+## Recent activity
+- YYYY(-MM) — item. ([source](url))
+
+## What to watch
+One forward-looking sentence.
+
+RULES:
+- Use ONLY the values in the structured profile; never invent facts.
+- If a field is unknown, write "—" and confidence "unknown"; do not fabricate a source.
+- Keep it tight; every source link must come from the profile."""
+
+
+def _build_user(state: PipelineState) -> str:
+    import json as _j
+    profile = state.get("profile", {})
+    return f"FIRM: {state['firm_name']}\n\nSTRUCTURED_PROFILE:\n{_j.dumps(profile, indent=2)[:6000]}"
+
+
+def run_writer(state: PipelineState, emit) -> PipelineState:
+    emit({"type": "phase", "phase": "write", "status": "Writing profile…"})
+    parts = []
+    for chunk in stream_llm(WRITER_SYSTEM, [{"role": "user", "content": _build_user(state)}],
+                            max_tokens=2500, temperature=0.3):
+        parts.append(chunk)
+        emit({"type": "report_chunk", "content": chunk})
+    md = "".join(parts).strip()
+
+    # first non-heading, non-empty line as summary
+    summary = ""
+    for line in md.splitlines():
+        s = line.strip().lstrip("*_ ").rstrip("*_ ")
+        if s and not s.startswith("#") and not s.startswith("|"):
+            summary = s; break
+
+    state["profile_md"] = md
+    state["summary"] = summary[:1024]
+    emit({"type": "report_done", "profile_md": md, "summary": summary})
+    return state
